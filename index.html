@@ -3,41 +3,596 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Link Shortener</title>
+<title>BlesProduction — Neon Space Link Shortener</title>
+
 <style>
-  body{font-family:Arial,sans-serif;margin:20px}
-  input,button{padding:10px;font-size:16px}
-  button{cursor:pointer}
-  #log{margin-top:12px;padding:10px;border:1px solid #ddd;border-radius:8px;background:#fafafa;white-space:pre-wrap}
-  .ok{color:green} .err{color:#b00020}
+  :root{
+    --bg:#050713;
+    --panel: rgba(10,14,28,.62);
+    --panel2: rgba(12,18,40,.40);
+    --text:#EAF0FF;
+    --muted:#A6B0CC;
+    --line: rgba(255,255,255,.10);
+    --shadow: 0 20px 70px rgba(0,0,0,.55);
+
+    --c1:#7C3AED;  /* violet */
+    --c2:#22D3EE;  /* cyan */
+    --c3:#34D399;  /* emerald */
+    --c4:#F472B6;  /* pink */
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 800px at 20% 10%, rgba(124,58,237,.12), transparent 55%),
+      radial-gradient(1000px 700px at 80% 30%, rgba(34,211,238,.10), transparent 55%),
+      radial-gradient(1000px 700px at 50% 85%, rgba(52,211,153,.07), transparent 60%),
+      var(--bg);
+    overflow-x:hidden;
+  }
+
+  /* ====== SIDE-ONLY SPACE ANIMATION (calm center) ====== */
+  .space{
+    position:fixed; inset:0;
+    z-index:-5;
+    pointer-events:none;
+    user-select:none;
+  }
+  .space .center-calm{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(680px 460px at 50% 38%, rgba(255,255,255,.02), transparent 60%),
+      radial-gradient(900px 620px at 50% 85%, rgba(255,255,255,.015), transparent 65%);
+    opacity:.75;
+  }
+  .side{
+    position:absolute; top:0; height:100%;
+    width:22%;
+    overflow:hidden;
+  }
+  .side.left{ left:0; background: radial-gradient(circle at left center, rgba(124,58,237,.12), transparent 70%); }
+  .side.right{ right:0; background: radial-gradient(circle at right center, rgba(34,211,238,.12), transparent 70%); }
+
+  .stars, .stars2, .stars3{
+    position:absolute; inset:-220px;
+    background-repeat: repeat;
+    transform: translateZ(0);
+    filter:none;
+    animation: drift 280s linear infinite;
+  }
+  .stars{ opacity:.18; background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,.85) 50%, transparent 51%),
+    radial-gradient(1px 1px at 30% 80%, rgba(255,255,255,.65) 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 40%, rgba(255,255,255,.75) 50%, transparent 51%),
+    radial-gradient(1px 1px at 90% 10%, rgba(255,255,255,.70) 50%, transparent 51%),
+    radial-gradient(1px 1px at 50% 60%, rgba(255,255,255,.70) 50%, transparent 51%),
+    radial-gradient(1px 1px at 80% 85%, rgba(255,255,255,.60) 50%, transparent 51%);
+    background-size: 260px 260px;
+  }
+  .stars2{ opacity:.12; animation-duration: 380s; background-image:
+    radial-gradient(1px 1px at 15% 25%, rgba(255,255,255,.70) 50%, transparent 51%),
+    radial-gradient(1px 1px at 45% 15%, rgba(255,255,255,.60) 50%, transparent 51%),
+    radial-gradient(1px 1px at 65% 75%, rgba(255,255,255,.70) 50%, transparent 51%),
+    radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,.55) 50%, transparent 51%),
+    radial-gradient(1px 1px at 25% 70%, rgba(255,255,255,.60) 50%, transparent 51%);
+    background-size: 340px 340px;
+  }
+  .stars3{ opacity:.08; animation-duration: 480s; background-image:
+    radial-gradient(1px 1px at 20% 10%, rgba(255,255,255,.55) 50%, transparent 51%),
+    radial-gradient(1px 1px at 60% 30%, rgba(255,255,255,.50) 50%, transparent 51%),
+    radial-gradient(1px 1px at 90% 80%, rgba(255,255,255,.45) 50%, transparent 51%),
+    radial-gradient(1px 1px at 40% 90%, rgba(255,255,255,.45) 50%, transparent 51%);
+    background-size: 420px 420px;
+  }
+  @keyframes drift{
+    from{ transform: translate3d(0,0,0); }
+    to{ transform: translate3d(-160px, 110px, 0); }
+  }
+
+  /* Side orbit glow ring */
+  .orbit{
+    position:absolute;
+    inset:-30%;
+    border-radius:50%;
+    opacity:.20;
+    filter: blur(10px);
+    background: conic-gradient(
+      from 0deg,
+      rgba(34,211,238,.35),
+      rgba(124,58,237,.35),
+      rgba(244,114,182,.30),
+      rgba(52,211,153,.30),
+      rgba(34,211,238,.35)
+    );
+    animation: spin 22s linear infinite;
+  }
+  .side.right .orbit{ animation-duration: 28s; opacity:.16; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .planet{
+    position:absolute; border-radius:50%;
+    opacity:.14;
+    animation: float 38s ease-in-out infinite;
+  }
+  .planet.p1{
+    width: 220px; height:220px;
+    left: -120px; top: 26%;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,.16), transparent 40%),
+      radial-gradient(circle at 45% 55%, rgba(34,211,238,.22), rgba(124,58,237,.10) 55%, rgba(0,0,0,.12) 75%);
+  }
+  .planet.p2{
+    width: 160px; height:160px;
+    right: -110px; top: 14%;
+    background:
+      radial-gradient(circle at 25% 25%, rgba(255,255,255,.14), transparent 38%),
+      radial-gradient(circle at 40% 60%, rgba(244,114,182,.18), rgba(34,211,238,.08) 55%, rgba(0,0,0,.12) 78%);
+    animation-duration: 44s;
+  }
+  .planet.p3{
+    width: 260px; height:260px;
+    right: -150px; bottom: -170px;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(255,255,255,.12), transparent 40%),
+      radial-gradient(circle at 45% 55%, rgba(52,211,153,.16), rgba(124,58,237,.08) 60%, rgba(0,0,0,.12) 80%);
+    opacity:.12;
+    animation-duration: 50s;
+  }
+  @keyframes float{
+    0%,100%{ transform: translate(0,0) rotate(0deg); }
+    50%{ transform: translate(10px, -12px) rotate(4deg); }
+  }
+
+  /* Rare meteors: only inside side rails */
+  .meteor-field{ position:absolute; inset:0; overflow:hidden; }
+  .meteor{
+    position:absolute;
+    width: 190px; height: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.60), rgba(255,255,255,0));
+    opacity:0;
+    filter: blur(.15px);
+  }
+  .meteor::after{
+    content:"";
+    position:absolute;
+    left:-140px; top:50%;
+    transform: translateY(-50%);
+    width: 140px; height: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.20));
+    opacity:.9;
+  }
+  .left .meteor{ transform: rotate(25deg); left:-60%; }
+  .left .meteor:nth-child(1){ top: 12%; animation: meteorLeft 56s ease-in-out infinite; animation-delay: 12s; }
+  .left .meteor:nth-child(2){ top: 32%; width: 230px; animation: meteorLeft 70s ease-in-out infinite; animation-delay: 30s; }
+  .left .meteor:nth-child(3){ top: 48%; width: 170px; animation: meteorLeft 84s ease-in-out infinite; animation-delay: 44s; }
+  @keyframes meteorLeft{
+    0%, 93% { opacity:0; transform: translate3d(-40%, -20%, 0) rotate(25deg); }
+    94% { opacity:.20; }
+    96% { opacity:.40; }
+    100% { opacity:0; transform: translate3d(40%, 40%, 0) rotate(25deg); }
+  }
+  .right .meteor{ transform: rotate(-25deg); right:-60%; }
+  .right .meteor:nth-child(1){ top: 18%; animation: meteorRight 60s ease-in-out infinite; animation-delay: 14s; }
+  .right .meteor:nth-child(2){ top: 36%; width: 230px; animation: meteorRight 74s ease-in-out infinite; animation-delay: 32s; }
+  .right .meteor:nth-child(3){ top: 52%; width: 170px; animation: meteorRight 88s ease-in-out infinite; animation-delay: 50s; }
+  @keyframes meteorRight{
+    0%, 93% { opacity:0; transform: translate3d(40%, -20%, 0) rotate(-25deg); }
+    94% { opacity:.18; }
+    96% { opacity:.38; }
+    100% { opacity:0; transform: translate3d(-40%, 40%, 0) rotate(-25deg); }
+  }
+
+  /* ====== APP ====== */
+  .wrap{
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 46px 18px;
+    position: relative;
+    z-index: 5;
+  }
+
+  .shell{
+    width: min(820px, 100%);
+    display:grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 14px;
+  }
+
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* Subtle neon border around cards */
+  .neon-border{
+    position:relative;
+    border-radius: 22px;
+  }
+  .neon-border::before{
+    content:"";
+    position:absolute; inset:-2px;
+    border-radius: inherit;
+    background: conic-gradient(from 0deg, var(--c2), var(--c1), var(--c4), var(--c3), var(--c2));
+    filter: blur(8px);
+    opacity: .15;
+    animation: spinCard 14s linear infinite;
+    z-index:-2;
+  }
+  .neon-border::after{
+    content:"";
+    position:absolute; inset:-1px;
+    border-radius: inherit;
+    background: conic-gradient(from 0deg,
+      rgba(34,211,238,.70),
+      rgba(124,58,237,.70),
+      rgba(244,114,182,.70),
+      rgba(52,211,153,.70),
+      rgba(34,211,238,.70)
+    );
+    animation: spinCard 18s linear infinite;
+    z-index:-1;
+    opacity:.42;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    padding: 2px;
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+  @keyframes spinCard{ to{ transform: rotate(360deg); } }
+
+  .main{ padding: 18px; }
+  .sideCard{ padding: 18px; background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); }
+
+  .top{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    justify-content:space-between;
+    margin-bottom: 12px;
+  }
+  .brand{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    line-height:1.1;
+  }
+  .brand h1{
+    margin:0;
+    font-size: 20px;
+    letter-spacing:.2px;
+  }
+  .brand p{
+    margin:0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .badge{
+    font-size:12px;
+    padding:8px 10px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    color: rgba(234,240,255,.92);
+    white-space:nowrap;
+    height: fit-content;
+  }
+
+  .field{
+    margin-top: 10px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .inputWrap{
+    flex:1;
+    position:relative;
+  }
+  input{
+    width:100%;
+    padding: 13px 44px 13px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.30);
+    color: var(--text);
+    outline: none;
+    font-size: 15px;
+  }
+  input::placeholder{ color: rgba(166,176,204,.75); }
+  input:focus{
+    border-color: rgba(34,211,238,.45);
+    box-shadow: 0 0 0 4px rgba(34,211,238,.10);
+  }
+  .clearBtn{
+    position:absolute;
+    right:10px; top:50%;
+    transform: translateY(-50%);
+    width: 28px; height: 28px;
+    border-radius: 10px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06);
+    color: rgba(234,240,255,.92);
+    cursor:pointer;
+  }
+  .clearBtn:hover{ background: rgba(255,255,255,.10); }
+
+  .btns{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top: 12px;
+  }
+  button.action{
+    flex:1;
+    min-width: 140px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.08);
+    color: var(--text);
+    padding: 12px 12px;
+    border-radius: 16px;
+    cursor:pointer;
+    font-weight: 800;
+    letter-spacing:.2px;
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    position:relative;
+    overflow:hidden;
+  }
+  button.action:hover{
+    transform: translateY(-1px);
+    background: rgba(255,255,255,.12);
+    border-color: rgba(255,255,255,.18);
+  }
+  button.action:active{ transform: translateY(0); }
+  button.action:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+    transform:none;
+  }
+
+  .primary{
+    background: linear-gradient(135deg, rgba(34,211,238,.20), rgba(124,58,237,.20));
+    border-color: rgba(34,211,238,.30);
+  }
+  .primary::after{
+    content:"";
+    position:absolute; inset:-1px;
+    background: radial-gradient(220px 120px at 20% 30%, rgba(34,211,238,.18), transparent 60%),
+                radial-gradient(220px 120px at 80% 70%, rgba(124,58,237,.16), transparent 60%);
+    opacity:.9;
+    pointer-events:none;
+  }
+
+  .resultBox{
+    margin-top: 14px;
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(0,0,0,.24);
+    border:1px solid rgba(255,255,255,.10);
+  }
+  .row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+  }
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06);
+    font-size: 13px;
+    color: rgba(234,240,255,.92);
+    max-width: 100%;
+  }
+  a.link{
+    color: rgba(34,211,238,.95);
+    text-decoration: none;
+    word-break: break-all;
+  }
+  a.link:hover{ text-decoration: underline; }
+
+  .status{
+    margin-top: 10px;
+    font-size: 13px;
+    color: rgba(166,176,204,.95);
+    min-height: 18px;
+  }
+
+  .check{
+    width: 52px; height:52px;
+    border-radius: 50%;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(52,211,153,.10);
+    border: 1px solid rgba(52,211,153,.30);
+    box-shadow: 0 0 26px rgba(52,211,153,.14);
+  }
+  .check svg{
+    width: 28px; height:28px;
+    stroke: rgba(52,211,153,.95);
+    stroke-width: 3.5;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: draw .55s ease forwards;
+  }
+  @keyframes draw{ to{ stroke-dashoffset: 0; } }
+
+  /* Side card content */
+  .miniTitle{
+    margin:0 0 10px 0;
+    font-size: 14px;
+    color: rgba(234,240,255,.92);
+    letter-spacing:.2px;
+  }
+  .hint{
+    color: var(--muted);
+    font-size: 13px;
+    margin:0 0 10px 0;
+    line-height: 1.5;
+  }
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top: 10px;
+  }
+  .chip{
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 999px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06);
+    color: rgba(234,240,255,.86);
+  }
+
+  .foot{
+    margin-top: 14px;
+    color: rgba(166,176,204,.75);
+    font-size: 12px;
+    text-align:center;
+  }
+
+  /* Calm sides during success */
+  body.scan-focus .side{ opacity:.82; transition: opacity .35s ease; }
+
+  @media (max-width: 900px){ .side{ width: 18%; } .shell{ grid-template-columns: 1fr; } }
+  @media (max-width: 560px){
+    .side{ width: 16%; }
+    .main,.sideCard{ padding: 16px; }
+    button.action{ min-width: 0; }
+  }
 </style>
 </head>
+
 <body>
+  <!-- SIDE-ONLY SPACE ANIMATION -->
+  <div class="space">
+    <div class="center-calm"></div>
 
-<h2>Link Shortener (Debug)</h2>
+    <div class="side left">
+      <div class="stars"></div>
+      <div class="stars2"></div>
+      <div class="stars3"></div>
+      <div class="orbit"></div>
+      <div class="planet p1"></div>
+      <div class="meteor-field">
+        <span class="meteor"></span><span class="meteor"></span><span class="meteor"></span>
+      </div>
+    </div>
 
-<input id="longUrl" type="text" placeholder="Masukkan link panjang" style="width:100%;max-width:720px" />
-<br><br>
+    <div class="side right">
+      <div class="stars"></div>
+      <div class="stars2"></div>
+      <div class="stars3"></div>
+      <div class="orbit"></div>
+      <div class="planet p2"></div>
+      <div class="planet p3"></div>
+      <div class="meteor-field">
+        <span class="meteor"></span><span class="meteor"></span><span class="meteor"></span>
+      </div>
+    </div>
+  </div>
 
-<button onclick="shortenUrl()">Pendekkan</button>
-<button onclick="copyShort()" id="copyBtn" disabled>Copy</button>
-<button onclick="openShort()" id="openBtn" disabled>Open</button>
+  <!-- APP -->
+  <div class="wrap">
+    <div class="shell">
+      <div class="neon-border">
+        <div class="card main">
+          <div class="top">
+            <div class="brand">
+              <h1>Link Shortener</h1>
+              <p>Pendekkan link tanpa login • style neon space modern</p>
+            </div>
+            <div class="badge">BlesProduction</div>
+          </div>
 
-<p id="result">Hasil akan muncul di sini.</p>
+          <div class="field">
+            <div class="inputWrap">
+              <input id="longUrl" type="text" placeholder="Masukkan link panjang (contoh: https://contoh.com/halaman/panjang)" />
+              <button class="clearBtn" id="clearBtn" title="Clear">×</button>
+            </div>
+          </div>
 
-<div id="log">LOG: (kalau tombol diklik tapi tidak jalan, di sini akan terlihat penyebabnya)</div>
+          <div class="btns">
+            <button class="action primary" id="shortBtn">Pendekkan</button>
+            <button class="action" id="copyBtn" disabled>Copy</button>
+            <button class="action" id="openBtn" disabled>Open</button>
+          </div>
+
+          <div class="resultBox">
+            <div class="row">
+              <div class="pill" id="resultPill">Hasil akan muncul di sini.</div>
+              <div class="check" id="check" aria-label="success">
+                <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+              </div>
+            </div>
+            <div class="status" id="statusText"></div>
+          </div>
+
+          <div class="foot">© <span id="year"></span> BlesProduction</div>
+        </div>
+      </div>
+
+      <div class="neon-border">
+        <div class="card sideCard">
+          <p class="miniTitle">Tips</p>
+          <p class="hint">
+            • Tekan <b>Enter</b> untuk memproses.<br/>
+            • Jika lupa protocol, otomatis jadi <b>https://</b>.<br/>
+            • Tombol <b>Copy</b> butuh HTTPS (GitHub Pages ✅).<br/>
+            • Jika gagal, coba ulang beberapa saat (bisa rate-limit).
+          </p>
+
+          <p class="miniTitle">Quick Actions</p>
+          <div class="chips">
+            <span class="chip">TinyURL</span>
+            <span class="chip">No Login</span>
+            <span class="chip">Neon UI</span>
+            <span class="chip">Mobile Friendly</span>
+          </div>
+
+          <p class="miniTitle" style="margin-top:14px;">Catatan</p>
+          <p class="hint" style="margin-bottom:0;">
+            Layanan pemendek link adalah pihak ketiga. Kalau kamu mau versi “tanpa pihak ketiga”, solusinya harus pakai server / domain redirect.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <script>
-  const logEl = document.getElementById("log");
-  const resultEl = document.getElementById("result");
+  const longUrlEl = document.getElementById("longUrl");
+  const shortBtn = document.getElementById("shortBtn");
   const copyBtn = document.getElementById("copyBtn");
   const openBtn = document.getElementById("openBtn");
+  const clearBtn = document.getElementById("clearBtn");
+
+  const resultPill = document.getElementById("resultPill");
+  const statusText = document.getElementById("statusText");
+  const check = document.getElementById("check");
+
   let lastShortUrl = "";
 
-  function log(msg, type=""){
-    const cls = type === "err" ? "err" : (type === "ok" ? "ok" : "");
-    logEl.innerHTML = `LOG: <span class="${cls}">${msg}</span>`;
-  }
+  document.getElementById("year").textContent = new Date().getFullYear();
 
   function normalizeUrl(input){
     let url = (input || "").trim();
@@ -50,66 +605,112 @@
     try { new URL(url); return true; } catch { return false; }
   }
 
+  function setLoading(isLoading){
+    shortBtn.disabled = isLoading;
+    shortBtn.textContent = isLoading ? "Memproses..." : "Pendekkan";
+  }
+
+  function clearSuccess(){
+    check.style.display = "none";
+  }
+
+  function showSuccess(msg){
+    statusText.textContent = msg;
+    check.style.display = "inline-flex";
+
+    // restart svg animation
+    const svg = check.querySelector("svg");
+    svg.style.animation = "none";
+    void svg.offsetWidth;
+    svg.style.animation = "";
+
+    if (navigator.vibrate) navigator.vibrate([40, 30, 60]);
+
+    document.body.classList.add("scan-focus");
+    setTimeout(()=>document.body.classList.remove("scan-focus"), 1200);
+  }
+
   async function shortenUrl(){
+    const raw = longUrlEl.value;
+    const longUrl = normalizeUrl(raw);
+
+    statusText.textContent = "";
+    clearSuccess();
+    copyBtn.disabled = true;
+    openBtn.disabled = true;
+    lastShortUrl = "";
+
+    if (!longUrl) {
+      resultPill.textContent = "Hasil akan muncul di sini.";
+      statusText.textContent = "Masukkan link terlebih dahulu.";
+      return;
+    }
+    if (!isValidUrl(longUrl)) {
+      resultPill.textContent = "Hasil akan muncul di sini.";
+      statusText.textContent = "Format URL tidak valid.";
+      return;
+    }
+
+    setLoading(true);
+    resultPill.textContent = "Memproses...";
+
     try{
-      log("Klik terdeteksi. Memproses...", "");
-      lastShortUrl = "";
-      copyBtn.disabled = true;
-      openBtn.disabled = true;
-
-      const longUrl = normalizeUrl(document.getElementById("longUrl").value);
-      if (!longUrl) {
-        resultEl.textContent = "Masukkan link dulu.";
-        return log("Input kosong.", "err");
-      }
-      if (!isValidUrl(longUrl)) {
-        resultEl.textContent = "Format URL tidak valid.";
-        return log("URL tidak valid.", "err");
-      }
-
-      resultEl.textContent = "Memproses (fetch TinyURL)...";
-      const api = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`;
-      log("Fetch ke: " + api);
-
-      const res = await fetch(api);
-      const shortUrl = (await res.text()).trim();
+      const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`);
+      const shortUrl = (await response.text()).trim();
 
       if (shortUrl.startsWith("http")){
         lastShortUrl = shortUrl;
-        resultEl.innerHTML = `Link pendek: <a href="${shortUrl}" target="_blank" rel="noopener">${shortUrl}</a>`;
+        resultPill.innerHTML = `Link pendek: <a class="link" href="${shortUrl}" target="_blank" rel="noopener">${shortUrl}</a>`;
         copyBtn.disabled = false;
         openBtn.disabled = false;
-        log("Berhasil: " + shortUrl, "ok");
+        showSuccess("✔ Berhasil dipendekkan");
       } else {
-        resultEl.textContent = "Gagal mempersingkat link.";
-        log("Respon tidak valid: " + shortUrl, "err");
+        resultPill.textContent = "Gagal mempersingkat link.";
+        statusText.textContent = "Coba lagi beberapa saat (mungkin sedang dibatasi).";
       }
-    } catch (e){
-      resultEl.textContent = "Terjadi error. Lihat LOG.";
-      log("ERROR: " + (e && e.message ? e.message : String(e)), "err");
+    } catch(err){
+      resultPill.textContent = "Terjadi kesalahan saat memproses.";
+      statusText.textContent = "Periksa koneksi internet / coba ulang.";
+    } finally{
+      setLoading(false);
     }
   }
 
   async function copyShort(){
+    if (!lastShortUrl) return;
     try{
-      if (!lastShortUrl) return log("Belum ada link pendek untuk dicopy.", "err");
-      // clipboard butuh HTTPS
       await navigator.clipboard.writeText(lastShortUrl);
-      log("Copied to clipboard.", "ok");
-    } catch (e){
-      log("Copy gagal (biasanya karena bukan HTTPS): " + (e.message || e), "err");
+      statusText.textContent = "✅ Tersalin ke clipboard";
+      if (navigator.vibrate) navigator.vibrate(40);
+    } catch {
+      statusText.textContent = "Copy gagal. Pastikan dibuka via HTTPS.";
     }
   }
 
   function openShort(){
-    if (!lastShortUrl) return log("Belum ada link pendek untuk dibuka.", "err");
+    if (!lastShortUrl) return;
     window.open(lastShortUrl, "_blank", "noopener");
-    log("Open: " + lastShortUrl, "ok");
   }
 
-  // bukti script jalan
-  log("Script loaded ✅. Jika tombol masih tidak respon, kemungkinan platform memblokir JS atau file dibuka via file://", "ok");
-</script>
+  function clearAll(){
+    longUrlEl.value = "";
+    lastShortUrl = "";
+    resultPill.textContent = "Hasil akan muncul di sini.";
+    statusText.textContent = "";
+    clearSuccess();
+    copyBtn.disabled = true;
+    openBtn.disabled = true;
+    longUrlEl.focus();
+  }
 
+  shortBtn.addEventListener("click", shortenUrl);
+  copyBtn.addEventListener("click", copyShort);
+  openBtn.addEventListener("click", openShort);
+  clearBtn.addEventListener("click", clearAll);
+
+  longUrlEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") shortenUrl();
+  });
+</script>
 </body>
 </html>
